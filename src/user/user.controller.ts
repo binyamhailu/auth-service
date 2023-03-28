@@ -1,4 +1,6 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { ActiveUser } from 'src/iam/authentication/decorator/active-user.decorator';
+import { ActiveUserData } from 'src/iam/interfaces/active-user-data.interface';
 
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -14,7 +16,8 @@ export class UserController {
   }
 
   @Get()
-  findAll() {
+  findAll(@ActiveUser() user:ActiveUserData) {
+    console.log(user)
     return this.userService.findAll();
   }
 
