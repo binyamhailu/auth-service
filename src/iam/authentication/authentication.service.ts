@@ -1,7 +1,10 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigType } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt/dist';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/user/entities/user.entity';
 import { Repository } from 'typeorm';
+import jwtConfig from '../config/jwt.config';
 import { HashingService } from '../hashing/hashing.service';
 import { SignUpDto } from './dto/sign-up.dto/sign-up.dto';
 
@@ -10,6 +13,10 @@ export class AuthenticationService {
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
     private readonly hashingService: HashingService,
+    private readonly jwtService: JwtService,
+
+    @Inject(jwtConfig.KEY)
+    private readonly jwtConfiguration: ConfigType<typeof jwtConfig>
   ) {
   }
   async  signUp(signUpDto: SignUpDto) {
@@ -20,7 +27,7 @@ export class AuthenticationService {
       user.password = await this.hashingService.hash(signUpDto.password);
       console.log(user.password);
 
-       await this.userRepository.save(user);
+     await this.userRepository.save(user);
     } catch (error) {
         console.log(error)
       throw new ConflictException();
@@ -37,6 +44,17 @@ export class AuthenticationService {
     if(!isPasswordEqual){
         throw new UnauthorizedException("Emaill or password is Incorrect")
     }
-    return true;
+    const accesstoken = await this.jwtService.signAsync({
+        sub:user.id,
+        email:user.email
+    },
+     {
+        audience:this.jwtConfiguration.audiance,
+        issuer:this.jwtConfiguration.issuer,
+        secret:this.jwtConfiguration.secret,
+        expiresIn: this.jwtConfiguration.accessTokenTtl
+     }
+    )
+    return {accesstoken};
   }
 }
